@@ -59,7 +59,7 @@
 <div class="two-input" style="margin-top:14px"><div><label class="small">현재 보유 🔴</label><input id="haveR" type="number" min="0" value="0"></div><div><label class="small">현재 보유 🔵</label><input id="haveB" type="number" min="0" value="0"></div><div><label class="small">현재 보유 🟢</label><input id="haveG" type="number" min="0" value="0"></div><div><label class="small">현재 보유 🟡</label><input id="haveY" type="number" min="0" value="0"></div></div><div class="first-turn" id="firstTurnRecommendation" aria-live="polite"></div></section>
 <section class="card"><aside class="history-pane quick-panel"><h3>추가로 모을 양 <span class="small" id="quickExamMode">시험 보상 기본 반영</span></h3><div id="turnsRemaining" class="small" style="margin:-6px 0 10px;color:#758198">0/12턴</div><div class="quick-remaining" id="quickRemaining"></div></aside><div class="selection-summary-head"><div class="selection-heading"><h2>선택 기록</h2><button id="recordRewardButton" class="record-btn" type="button">선택 추가</button><button id="clearSelectionHistoryButton" class="muted-btn" type="button">기록 초기화</button><p class="hint">기록을 추가하면 현재 보유량에 반영됩니다. 삭제하면 보유량도 되돌립니다.</p><div class="small" id="recordStatus" aria-live="polite"></div></div></div><div class="history-pane"><h3>기록된 보상</h3><div class="selection-log"><div id="selectionHistory" class="small">아직 기록된 선택이 없습니다.</div></div></div></section>
 <section class="card full"><h2>시험 보상 반영</h2><div style="margin-top:12px"><b id="examRewardHeading">추가 반영할 시험 보상</b><div class="stat-row" id="examRewardStats" style="margin-top:6px"></div></div><h3 style="font-size:15px;margin:16px 0 6px">목표까지 추가로 모을 양</h3><div class="stat-row" id="remainingStats"></div><div id="completion" class="formula" aria-live="polite"></div></section>
-<dialog id="choiceNameDialog" class="name-picker"><div class="picker-head"><button class="picker-close" id="closeNamePicker" type="button">닫기</button><h3>이름 선택지 선택</h3><div class="small">확정 보상은 누르면 바로 보유량에 더하고, 랜덤 보상은 실제 받은 수량을 입력합니다. 같은 선택지가 다시 등장할 수 있으므로 필요한 만큼 여러 번 기록할 수 있습니다.</div><div id="choicePickerProgress" class="small" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div><input id="choiceSearch" type="search" placeholder="이름 검색"></div><div id="choiceNameList" class="picker-list"></div></dialog>
+<dialog id="choiceNameDialog" class="name-picker"><div class="picker-head"><button class="picker-close" id="closeNamePicker" type="button">닫기</button><h3>이름 선택지 선택</h3><div class="small">확정 보상은 누르면 바로 보유량에 더하고, 랜덤 보상은 실제 받은 수량을 입력합니다. 같은 선택지가 다시 등장할 수 있으므로 필요한 만큼 여러 번 기록할 수 있습니다.</div><div id="choicePickerProgress" class="small" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div><input id="choiceSearch" type="search" placeholder="이름 또는 색 검색 · 빨·파·초·노도 가능 (순서 무관)"></div><div id="choiceNameList" class="picker-list"></div></dialog>
 <dialog id="multiplierDialog" class="name-picker"><div class="picker-head"><button class="picker-close" id="closeMultiplierPicker" type="button">닫기</button><h3>배수 캐릭터 선택</h3><div class="small">실제로 편성할 캐릭터를 최대 3명 선택하세요. 같은 트레이너의 승재 버전은 하나만 선택할 수 있습니다.</div><div id="boostPickerStatus" class="small" aria-live="polite"></div></div><div id="boostCharacterList" class="boost-character-grid"></div><div class="boost-footer"><span id="boostPickerTotal" class="small">현재 배수 1.5× · 0/3명</span><button id="doneMultiplierPicker" class="record-btn" type="button">완료</button></div></dialog>
 <dialog id="recordRewardDialog" class="name-picker"><div class="picker-head"><button class="picker-close" id="closeRecordReward" type="button">닫기</button><h3 id="recordRewardTitle">선택 보상</h3><div class="small" id="recordRewardHint">가능한 보상 중 실제 받은 수량을 선택하세요.</div></div><label class="small" style="display:block;padding:12px 16px 0">선택 이름 <span>(직접 입력은 선택)</span><input id="recordName" type="text" value="" style="margin-top:4px"></label><div id="recordRewardFields" class="fields" style="padding:16px"></div><div style="padding:0 16px 16px"><button id="confirmRecordReward" class="record-btn" type="button">현재 보유에 합산</button></div></dialog>
 <section class="card full"><h2>필수 전투 보상</h2><p class="hint">중간·기말고사는 1.5배 고정입니다.</p><div class="table-wrap"><table><thead><tr><th>전투 유형</th><th>기본 보상</th><th>현재 배수 반영</th><th>비고</th></tr></thead><tbody id="battleRows"></tbody></table></div></section>
@@ -84,12 +84,13 @@
 <p class="hint">시험 포함 12턴 기준 · 6턴 중간고사 / 12턴 기말고사 · 아래 범위에서 등장 가능</p>
 <div class="table-wrap"><table class="probability-table"><thead><tr><th>선택지 · 보상</th><th>등장 가능 턴</th></tr></thead><tbody>
 <tr><td>쉬는시간 교류</td><td>3~11턴</td></tr>
-<tr><td>단일 300개 스토리 · 🔴 빨강 (Fiery Orb)</td><td>3~11턴</td></tr>
+<tr><td>망초 스토리 · 🔴 빨강 300개</td><td>3~7턴</td></tr>
+<tr><td>도정 스토리 · 🔴 빨강 300개</td><td>8~11턴</td></tr>
 <tr><td>단일 300개 스토리 · 🟢 초록 (Leafy Orb)</td><td>3~7턴</td></tr>
 <tr><td>단일 300개 스토리 · 🟡 노랑 (Sparky Orb)</td><td>8~11턴</td></tr>
 <tr><td>단일 300개 스토리 · 🔵 파랑 (Bubbly Orb)</td><td>8~11턴</td></tr>
 <tr><td>샤틀레느</td><td>2~11턴</td></tr>
-<tr><td>60 · 120 · 180개를 주는 전투</td><td>2~11턴</td></tr>
+<tr><td>60 · 120 · 180개를 주는 전투</td><td>1~11턴</td></tr>
 <tr><td>쿠쿠이 박사</td><td>1~5턴</td></tr>
 <tr><td>클라벨 박사</td><td>7~11턴</td></tr>
 <tr><td>그린</td><td>7~11턴</td></tr>
@@ -443,7 +444,7 @@ const currentObservedBattles=[
  {name:'도정',type:'nonbattle',note:'스토리 · 🔴',values:{R:300,G:0,B:0,Y:0}},
  {name:'카틀레야',type:'nonbattle',note:'스토리 · 🔵',values:{R:0,G:0,B:300,Y:0}},
  {name:'마적',type:'nonbattle',note:'스토리 · 🟢',values:{R:0,G:300,B:0,Y:0}},
- {name:'자크로 스토리',type:'nonbattle',note:'스토리 · 노랑',values:{R:0,G:0,B:0,Y:300}},
+ {name:'자크로',type:'nonbattle',note:'스토리 · 노랑',values:{R:0,G:0,B:0,Y:300}},
  {name:'코르니',type:'battle',note:'전투 · 빨강+초록',values:{R:45,G:45,B:0,Y:0}},
  {name:'용규',type:'battle',note:'전투 · 빨강+초록+노랑',values:{R:40,G:40,B:0,Y:40}},
  {name:'민화',type:'battle',note:'전투 · 파랑+노랑',values:{R:0,G:0,B:45,Y:45}},
@@ -522,7 +523,7 @@ const currentObservedBattles=[
  {name:'샤틀레느 3번째 전투 (라쥬르네)',type:'battle',note:'전투 · 빨강+파랑+노랑',values:{R:60,G:0,B:60,Y:60}},
  {name:'샤틀레느 4번째 전투 (라뉴이)',type:'battle',note:'전투 · 초록+파랑+노랑',values:{R:0,G:80,B:80,Y:80}}
 ];
-const storySortOrder=['채두 스토리','채두 스토리2','운향 스토리','승재 스토리','도정','망초','카틀레야','마적','자크로 스토리'];
+const storySortOrder=['채두 스토리','채두 스토리2','운향 스토리','승재 스토리','도정','망초','카틀레야','마적','자크로'];
 const storySortRank=name=>{const rank=storySortOrder.indexOf(name);return rank<0?storySortOrder.length:rank;};
 function rangedColor(name,key,min,max,description,amountChoices=null,type='nonbattle'){const low={R:0,B:0,G:0,Y:0},high={R:0,B:0,G:0,Y:0};low[key]=min;high[key]=max;return {name,type,description,values:low,minValues:low,maxValues:high,amountChoices:amountChoices?{[key]:amountChoices}:null};}
 function randomOneColor(name,min,max,description,type='nonbattle'){return {name,type,description,values:{R:0,B:0,G:0,Y:0},minValues:{R:0,B:0,G:0,Y:0},minOutcome:min,maxOutcomes:colors.map(c=>{const v={R:0,B:0,G:0,Y:0};v[c[0]]=max;return v;})};}
@@ -540,15 +541,37 @@ const variableChoiceCatalog=[
 // Oak's own repeatability after either reward remains unverified; no self-lock is applied.
 function hasRecordedChoice(key){return selectedChoices.some(item=>item.choiceKey===key||(item.choiceKey===undefined&&item.name===key));}
 function getChoiceLockReason(item){
+ if((item.name==='쿠쿠이 박사'||item.name==='클라벨 박사')&&hasRecordedChoice(item.name))return '선택 완료';
  if(item.name==='그린'){
   if(hasRecordedChoice('그린'))return '선택 완료';
   if(hasRecordedChoice('오박사'))return '오박사 선택 후 그린 등장 불가';
  }
  return '';
 }
+// Appearance windows from work/academy_2_67_appearance_rounds.json, including user corrections.
+function getChoiceAppearanceRange(item){
+ const byName={
+  '망초':[3,7],'도정':[8,11],'마적':[3,7],'자크로':[8,11],'카틀레야':[8,11],
+  '쿠쿠이 박사':[1,5],'클라벨 박사':[7,11],'그린':[7,11],'오박사':[7,11],
+  '볼가이':[7,11],'웅':[3,11],'모야모':[3,11],'우리':[3,11],'목호':[3,11],'블래리':[3,11]
+ };
+ if(byName[item.name])return byName[item.name];
+ if(item.name.startsWith('쉬는시간 교류 · '))return [3,11];
+ if(item.name.startsWith('N의 질문 · ')||item.name.startsWith('플라타느 질문 · '))return [7,11];
+ if(item.name.startsWith('샤틀레느'))return [2,11];
+ if(['민진','네모','단델','로켓단'].includes(item.series))return [1,11];
+ return null;
+}
+function getChoiceSearchText(item){
+ const aliases={R:'빨강 빨간 빨강오브 빨간오브 적색 red',B:'파랑 파란 파랑오브 파란오브 청색 blue',G:'초록 초록오브 녹색 녹색오브 green',Y:'노랑 노란 노랑오브 노란오브 황색 yellow'};
+ const rewards=[item.values,item.minValues,item.maxValues,...(item.maxOutcomes||[])].filter(Boolean);
+ const palette=colors.filter(c=>rewards.some(values=>Number(values[c[0]]||0)>0)||(item.brockReward?.colors||[]).includes(c[0]));
+ const range=getChoiceAppearanceRange(item);
+ return [item.name,item.description,item.pickerNote,...palette.map(c=>c[1]+' '+aliases[c[0]]),range?'등장 '+range[0]+'~'+range[1]+'턴':''].filter(Boolean).join(' ');
+}
 function renderNamePicker(){
  const dialog=document.getElementById('choiceNameDialog'),list=document.getElementById('choiceNameList');
- const fixed=currentObservedBattles.map(x=>({name:x.series?x.name+' '+x.stage+'단계':x.name,type:x.type,series:x.series||'',stage:x.stage||0,description:[x.note,colors.filter(c=>x.values[c[0]]>0).map(c=>c[1]+' '+fmt(x.values[c[0]])).join(' · ')].filter(Boolean).join(' — '),values:x.values}));
+ const fixed=currentObservedBattles.map(x=>({name:x.series?x.name+' '+x.stage+'단계':x.name,type:x.type,series:x.series||'',stage:x.stage||0,description:colors.filter(c=>x.values[c[0]]>0).map(c=>c[1]+' '+fmt(x.values[c[0]])).join(' · '),values:x.values}));
  const colorSignature=item=>colors.filter(c=>Number(item.values[c[0]]||0)>0).map(c=>c[0]).join('');
  const colorCount=item=>colorSignature(item).length;
  const colorOrder={R:0,B:1,G:2,Y:3};
@@ -557,7 +580,7 @@ function renderNamePicker(){
  const specialNames=new Set(['레드','민진','네모','단델','로켓단']);
  const specialBattles=fixed.filter(x=>specialNames.has(x.name)||specialNames.has(x.series)||x.name.startsWith('샤틀레느')).sort((a,b)=>{const rank=x=>x.name==='레드'?0:x.name.startsWith('샤틀레느')?1:x.series?2:3,ra=rank(a),rb=rank(b);if(ra!==rb)return ra-rb;if(ra===2){const order={민진:0,네모:1,단델:2,로켓단:3};return (order[a.series]??9)-(order[b.series]??9)||a.stage-b.stage;}return a.name.localeCompare(b.name,'ko',{numeric:true});});
  const regularBattles=fixed.filter(x=>x.type==='battle'&&!specialBattles.includes(x)).sort(sortByPalette);
- const stories=fixed.filter(x=>x.type!=='battle').sort((a,b)=>storySortRank(a.name)-storySortRank(b.name)||a.name.localeCompare(b.name,'ko'));
+ const stories=[...new Map(fixed.filter(x=>x.type!=='battle').map(item=>[item.name,item])).values()].sort((a,b)=>storySortRank(a.name)-storySortRank(b.name)||a.name.localeCompare(b.name,'ko'));
  const autoExams=includeExams(),turns=getTurnProgress();document.getElementById('choicePickerProgress').innerHTML='<span class="picker-progress-chip"><b>'+turns.current+'/'+turns.total+'턴</b></span><span class="picker-progress-chip '+(autoExams?'done':'pending')+'">'+(autoExams?'시험 보상 기본 반영':'시험 보상 직접 기록')+'</span>';
  const doctorItems=variableChoiceCatalog.filter(item=>item.name==='쿠쿠이 박사'||item.name==='클라벨 박사'),variableItems=variableChoiceCatalog.filter(item=>!doctorItems.includes(item));
  const pickerBattleSummary=item=>{if(item.type!=='battle')return '';const m=Number(document.getElementById('mult').value)||1;if(item.name==='쿠쿠이 박사'||item.name==='클라벨 박사')return '현재 '+m.toFixed(1)+'× → 한 색 '+fmt(Math.round(90*m))+'개';const scaled=colors.filter(c=>Number(item.values[c[0]]||0)>0).map(c=>c[1]+' '+fmt(Math.round(Number(item.values[c[0]])*m))).join(' · ');return scaled?'현재 '+m.toFixed(1)+'× → '+scaled:'';};
@@ -567,14 +590,22 @@ function renderNamePicker(){
   const note=item.pickerNote?'<span class="small" style="display:inline;margin-left:6px">'+escapeHtml(item.pickerNote)+'</span>':'';
   const description='<span class="small">'+escapeHtml(item.description||'보상 직접 입력')+'</span>';
   const reward=item.type==='battle'?'<span class="small picker-current-reward">'+escapeHtml(pickerBattleSummary(item))+'</span>':'';
+  const range=getChoiceAppearanceRange(item);
+  const appearance=range?'<span class="small picker-appearance-rounds">등장 '+range[0]+'~'+range[1]+'턴</span>':'';
   const lock=reason?'<span class="small">'+escapeHtml(reason)+'</span>':'';
-  return '<button type="button" data-picker-group="'+group+'" data-picker-index="'+i+'" data-search-item '+(reason?'disabled':'')+'>'+name+note+description+reward+lock+'</button>';
+  return '<button type="button" data-picker-group="'+group+'" data-picker-index="'+i+'" data-search-item data-search-text="'+escapeHtml(getChoiceSearchText(item))+'" '+(reason?'disabled':'')+'>'+name+note+description+reward+appearance+lock+'</button>';
  }).join('')+'</div>';
  const manualMarkup='<section class="picker-group"><h4>목록에 없는 선택지</h4><button type="button" data-manual-entry data-search-item data-search-text="목록에 없는 선택지 직접 입력" class="muted-btn">선택 이름과 🔴🔵🟢🟡 보상 직접 입력</button></section>';
- const exams='<section class="picker-group"><h4>시험 보상</h4><div class="picker-items">'+Object.entries(examStages).map(([stage,exam])=>{const recorded=selectedChoices.some(item=>item.examStage===stage),disabled=autoExams||recorded,reason=recorded?'기록 완료':autoExams?'기본 반영 중':'현재 보유량에 합산';return '<button type="button" data-exam-stage="'+stage+'" data-search-item '+(disabled?'disabled':'')+'>'+exam.name+'<span class="small">'+colors.filter(c=>exam.amounts[c[0]]>0).map(c=>c[1]+' '+fmt(exam.amounts[c[0]])).join(' · ')+'</span><span class="small">'+reason+'</span></button>';}).join('')+'</div></section>';
- const doctors='<section class="picker-group"><h4>박사</h4><div class="picker-items">'+doctorItems.map((item,i)=>'<button type="button" data-picker-group="doctor" data-picker-index="'+i+'" data-search-item>'+escapeHtml(item.name)+'<span class="small">'+escapeHtml(item.description||'보상 직접 입력')+'</span><span class="small picker-current-reward">'+escapeHtml(pickerBattleSummary(item))+'</span></button>').join('')+'</div></section>';
+ const exams='<section class="picker-group"><h4>시험 보상</h4><div class="picker-items">'+Object.entries(examStages).map(([stage,exam])=>{const recorded=selectedChoices.some(item=>item.examStage===stage),disabled=autoExams||recorded,reason=recorded?'기록 완료':autoExams?'기본 반영 중':'현재 보유량에 합산';return '<button type="button" data-exam-stage="'+stage+'" data-search-item data-search-text="'+escapeHtml(getChoiceSearchText({name:exam.name,values:exam.amounts}))+'" '+(disabled?'disabled':'')+'>'+exam.name+'<span class="small">'+colors.filter(c=>exam.amounts[c[0]]>0).map(c=>c[1]+' '+fmt(exam.amounts[c[0]])).join(' · ')+'</span><span class="small">'+reason+'</span></button>';}).join('')+'</div></section>';
+ const doctors='<section class="picker-group"><h4>박사</h4>'+renderItems(doctorItems,'doctor')+'</section>';
  list.innerHTML='<div class="picker-tabs" role="tablist" aria-label="보상 종류"><button type="button" class="active" data-picker-tab="special">특별전투</button><button type="button" data-picker-tab="battle">일반 전투</button><button type="button" data-picker-tab="story">스토리</button><button type="button" data-picker-tab="other">교류 및 도박</button></div><div class="picker-pane" data-picker-pane="special">'+manualMarkup+exams+doctors+renderItems(specialBattles,'special')+'</div><div class="picker-pane" data-picker-pane="battle">'+manualMarkup+'<p class="small">3색 → 2색 → 1색, 같은 색 조합 순서</p>'+renderItems(regularBattles,'fixedBattle')+'</div><div class="picker-pane" data-picker-pane="story">'+manualMarkup+'<p class="small">3색 → 2색 → 1색, 같은 색 조합 순서</p>'+renderItems(stories,'fixedStory')+'</div><div class="picker-pane" data-picker-pane="other">'+manualMarkup+'<section class="picker-group"><h4>교류 및 도박 보상</h4>'+renderItems(variableItems,'variable')+'</section></div>';
- const activateTab=key=>{list.querySelectorAll('[data-picker-pane]').forEach(p=>p.hidden=p.dataset.pickerPane!==key);list.querySelectorAll('[data-picker-tab]').forEach(b=>b.classList.toggle('active',b.dataset.pickerTab===key));};
+ let activePickerTab='special';
+ const activateTab=key=>{activePickerTab=key;list.querySelectorAll('[data-picker-pane]').forEach(p=>p.hidden=p.dataset.pickerPane!==key);list.querySelectorAll('[data-picker-tab]').forEach(b=>b.classList.toggle('active',b.dataset.pickerTab===key));};
+ list.querySelector('.picker-tabs').insertAdjacentHTML('afterend','<p class="small" data-search-status role="status" hidden></p>');
+ list.querySelectorAll('[data-picker-pane]').forEach(pane=>{
+  const label=Array.from(list.querySelectorAll('[data-picker-tab]')).find(button=>button.dataset.pickerTab===pane.dataset.pickerPane);
+  pane.insertAdjacentHTML('afterbegin','<h4 data-search-category hidden>'+escapeHtml(label.textContent)+'</h4>');
+ });
  list.querySelectorAll('[data-picker-tab]').forEach(button=>button.addEventListener('click',()=>activateTab(button.dataset.pickerTab)));
  list.querySelectorAll('[data-exam-stage]').forEach(button=>button.addEventListener('click',()=>{recordExamChoice(button.dataset.examStage);dialog.close();}));
  list.querySelectorAll('[data-picker-index]').forEach(button=>button.addEventListener('click',()=>{
@@ -585,7 +616,27 @@ function renderNamePicker(){
  document.getElementById('recordName').value=item.name;document.getElementById('recordRewardTitle').textContent=item.name+' 실제 보상';document.getElementById('recordRewardHint').textContent=item.brockReward?'받은 색과 수량을 목록에서 선택하세요.':(item.description||'가능한 보상').replaceAll('·','—')+' · 가능한 색과 수량만 선택할 수 있어요.';renderRewardFields(item);dialog.close();document.getElementById('recordRewardDialog').showModal();
  }));
  list.querySelectorAll('[data-manual-entry]').forEach(button=>button.addEventListener('click',()=>{recordingItem={name:'미확인 선택지',type:'nonbattle',custom:true};document.getElementById('recordName').value='미확인 선택지';document.getElementById('recordRewardTitle').textContent='선택 보상 직접 입력';document.getElementById('recordRewardHint').textContent='선택 이름과 실제 받은 🔴🔵🟢🟡 수량을 입력하면 현재 보유량에 합산합니다.';renderRewardFields(recordingItem);dialog.close();document.getElementById('recordRewardDialog').showModal();}));
- const search=document.getElementById('choiceSearch');search.value='';search.oninput=()=>{const query=search.value.trim().toLocaleLowerCase();let firstMatch=null;list.querySelectorAll('[data-search-item]').forEach(button=>{const haystack=(button.dataset.searchText||button.textContent).toLocaleLowerCase();button.hidden=Boolean(query&&!haystack.includes(query));const pane=button.closest('[data-picker-pane]');if(query&&!button.hidden&&!firstMatch&&pane)firstMatch=pane.dataset.pickerPane;});if(query&&firstMatch)activateTab(firstMatch);else if(!query)activateTab('special');list.querySelectorAll('.picker-group').forEach(group=>{group.hidden=!Array.from(group.querySelectorAll('button')).some(button=>!button.hidden);});};
+ const search=document.getElementById('choiceSearch');search.value='';search.oninput=()=>{
+  const query=search.value.trim().toLocaleLowerCase(),terms=query.replace(/(빨강|파랑|노랑|초록)/g,' $1 ').split(/[\s,+·]+/).filter(Boolean).flatMap(term=>/^[빨파초노]+$/.test(term)?Array.from(term,c=>({빨:'빨강',파:'파랑',초:'초록',노:'노랑'})[c]):[term]);
+  const searching=terms.length>0;
+  let matches=0;
+  list.querySelectorAll('[data-search-item]').forEach(button=>{
+   const haystack=(button.dataset.searchText||button.textContent).toLocaleLowerCase();
+   button.hidden=terms.some(term=>!haystack.includes(term))||(searching&&button.hasAttribute('data-manual-entry'));
+   if(searching&&!button.hidden)matches++;
+  });
+  list.querySelectorAll('.picker-group').forEach(group=>{group.hidden=!Array.from(group.querySelectorAll('button')).some(button=>!button.hidden);});
+  list.querySelectorAll('[data-picker-pane]').forEach(pane=>{
+   const hasMatches=Array.from(pane.querySelectorAll('[data-search-item]')).some(button=>!button.hidden);
+   pane.hidden=searching?!hasMatches:pane.dataset.pickerPane!==activePickerTab;
+   pane.querySelector('[data-search-category]').hidden=!searching;
+   pane.querySelectorAll(':scope > p').forEach(note=>note.hidden=searching);
+  });
+  list.querySelector('.picker-tabs').style.display=searching?'none':'';
+  const status=list.querySelector('[data-search-status]');
+  status.hidden=!searching;
+  status.textContent=matches?'전체 검색 결과 '+matches+'개':'일치하는 선택지가 없습니다.';
+ };
  activateTab('special');
 }document.getElementById('closeNamePicker').addEventListener('click',()=>document.getElementById('choiceNameDialog').close());
 document.getElementById('choiceNameDialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
