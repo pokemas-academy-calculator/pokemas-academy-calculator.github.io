@@ -55,6 +55,8 @@
 .planner-choice-warning{display:block;width:fit-content;margin-top:7px;padding:3px 7px;border:1px solid var(--red);border-radius:6px;font-size:12px;font-weight:800;color:var(--red);background:var(--bg)}
 .planner-ranking-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 8px}.planner-ranking-head h3{font-size:13px;margin:0;line-height:1.5}.planner-mode-switch{display:inline-flex;gap:2px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--bg)}.planner-mode-switch button{font:inherit;font-size:11px;line-height:1.4;white-space:nowrap;border:1px solid transparent;border-radius:5px;padding:3px 7px;background:transparent;color:var(--muted);cursor:pointer}.planner-mode-switch button[aria-pressed="true"]{background:var(--card);border-color:var(--blue);color:var(--blue);font-weight:700}.planner-mode-switch button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.planner-mode-note{margin:0 0 8px;line-height:1.6}.planner-upside-badge{display:inline-block;margin-top:6px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;font-size:11px;color:var(--blue);background:var(--bg)}
 .planner-top-grid{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(0,1.4fr);gap:18px;align-items:start;margin:12px 0 14px}.planner-top-main{min-width:0}.planner-top-main .planner-controls{margin-top:0}.planner-top-side{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start;min-width:0}.planner-top-side>div{min-width:0}.planner-top-side .planner-clavell,.planner-top-side .planner-other{margin:0;padding:12px;min-width:0}.planner-top-side .planner-clavell b{font-size:13px}.planner-top-side .planner-clavell p{font-size:12px;line-height:1.6}.planner-top-side .planner-other .small{font-size:11px}.planner-top-side .planner-other input,.planner-top-side .planner-other select{font-size:12px;padding:7px 8px}.planner-top-side .planner-other label{margin-top:7px}.planner-advisory{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;padding:11px 13px;margin:12px 0;background:var(--bg);color:var(--muted);font-size:12px;line-height:1.65}.planner-advisory strong{color:var(--ink)}.planner-advisory p{margin:4px 0 0}@media(max-width:760px){.planner-top-grid{grid-template-columns:1fr;gap:10px}.planner-top-side{grid-template-columns:minmax(0,1fr)}}@media(max-width:520px){.planner-top-side{grid-template-columns:1fr}.planner-advisory{padding:10px 11px}}
+
+.planner-priority-row .planner-partial-warning,.planner-lookup-card .planner-partial-warning{color:var(--muted);background:transparent;border:0;border-left:2px solid var(--line);border-radius:0;padding:3px 0 3px 8px;line-height:1.6}.planner-partial-warning strong{font-weight:700}.planner-completion-badge{border-color:var(--blue);font-weight:800;padding:4px 8px}
 </style></head><body><div class="wrap">
 <h1>포케마스 아카데미 계산기</h1><p class="sub">목표 빌드의 색별 요구량을 계산합니다.</p>
 <div class="navigation-row"><div class="app-tabs" role="tablist" aria-label="계산기 메뉴"><button type="button" id="calculatorTab" role="tab" aria-controls="calculatorPanel" aria-selected="true">드롭 계산기</button><button type="button" id="probabilityTab" role="tab" aria-controls="probabilityPanel" aria-selected="false">확률 정보</button></div><button type="button" id="themeToggle" class="theme-toggle" aria-label="다크 모드로 전환" title="다크 모드로 전환" aria-pressed="false">🌙</button></div>
@@ -445,6 +447,9 @@ const AcademyPlanner=(()=>{
  // For longer runs, the leaf is a heuristic; values are never shown as run odds.
  async function recommendChoices({model,state,rounds,deficits,forceClavell=true,preference='balanced',cancelled=()=>false,timeBudgetMs=1400}){
   if(!rounds.length||sum(deficits)===0)return {items:[],depth:0,exact:false};
+  const clavellUsed=Boolean(state.used&model.clavellBit);
+  const freeRounds=rounds.filter(round=>round!==11||!forceClavell||clavellUsed);
+  const lastFreeChoice=freeRounds.length===1&&freeRounds[0]===rounds[0];
   // This is a utility preference, never a replacement for outcome probabilities.
   const upsidePreference=preference==='upside'?.5:0;
   const preferUpside=(expected,best,weight)=>weight?expected+weight*(best-expected):expected;
@@ -532,6 +537,9 @@ const AcademyPlanner=(()=>{
    }
    const known=quest.outcomes.every(outcome=>outcome.probability!==null);
    const expectedValue=known?branches.reduce((total,branch)=>total+branch.outcome.probability*branch.value,0):Math.min(...branches.map(branch=>branch.value));
+   // On the last free choice, compare completion using the modeled outcome
+   // probabilities. Partial recovery still breaks ties.
+   if(lastFreeChoice)return {value:expectedValue,branches};
    const bestValue=Math.max(...branches.map(branch=>branch.value)),highProbability=known?branches.filter(branch=>Math.abs(branch.value-bestValue)<1e-10).reduce((total,branch)=>total+branch.outcome.probability,0):null;
    return {value:preferUpside(expectedValue,bestValue,upsideWeightFor(quest,need,highProbability)),branches};
   }
@@ -565,7 +573,8 @@ const AcademyPlanner=(()=>{
   for(const quest of roots){const key=quest.equivalenceKey||quest.id;if(!representatives.has(key))representatives.set(key,quest);}
   let completed=new Map(),completedDepth=0;
   try{
-   for(let depth=1;depth<=Math.min(3,rounds.length);depth++){
+   // The last free choice leaves at most two slots, including any forced Clavell.
+   for(let depth=lastFreeChoice?rounds.length:1;depth<=Math.min(3,rounds.length);depth++){
     const pass=new Map();
     for(const [key,quest] of representatives){
      if(cancelled())throw 'cancelled';
@@ -575,8 +584,6 @@ const AcademyPlanner=(()=>{
    }
   }catch(reason){if(reason==='cancelled')return {items:[],cancelled:true};if(reason!=='limit')throw reason;}
   const exact=completedDepth===rounds.length;
-  const clavellUsed=Boolean(state.used&model.clavellBit);
-  const freeRounds=rounds.filter(round=>round!==11||!forceClavell||clavellUsed);
   const blueQuest=model.quests.find(quest=>quest.kind==='그린');
   const futureBlueSlots=blueQuest&&!(state.used&(model.blueBit|model.oakBit))?rounds.slice(1).filter(round=>(round!==11||!forceClavell||clavellUsed)&&round>=blueQuest.range[0]&&round<=blueQuest.range[1]).length:0;
   const items=roots.map(quest=>{
@@ -640,7 +647,7 @@ const AcademyPlanner=(()=>{
     item.expectedProgress=recovery.expected;item.favorableProgress=recovery.best;item.upsideWeight=upsideWeight;
     item.endgameFallback=freeRounds.length<=3&&quest.kind==='오박사'&&upsideWeight>1e-8&&recovery.best>recovery.expected+1e-10;
     item.tieValue=(.85*preferredRecovery+.15*preferredCurrent)*(1+(item.deadline?.08:0)+(quest.kind==='그린'?.05:0))-greenPenalty;
-    item.score=exact?item.value:item.value*.75+item.tieValue*.25;
+    item.score=lastFreeChoice&&!upsidePreference?recovery.expected:exact?item.value:item.value*.75+item.tieValue*.25;
    }
    items.sort((a,b)=>Math.abs(b.score-a.score)>1e-10?b.score-a.score:b.tieValue-a.tieValue||a.quest.title.localeCompare(b.quest.title,'ko'));
   }
@@ -650,7 +657,9 @@ const AcademyPlanner=(()=>{
    // favorable upside remains a bounded preference, never guaranteed supply.
    for(const item of items){
     item.guaranteedFocusValue=deficits.reduce((total,need,c)=>total+(need===largest?Math.min(need,...item.quest.outcomes.map(outcome=>outcome.reward[c]))*weights[c]:0),0)/initialCost;
-    item.score=.35*item.immediateUpsideValue+.5*item.tieValue+.15*item.value;
+    const upsideScore=.35*item.immediateUpsideValue+.5*item.tieValue+.15*item.value;
+    if(lastFreeChoice)item.tieValue=upsideScore;
+    else item.score=upsideScore;
    }
    items.sort((a,b)=>Math.abs(b.score-a.score)>1e-10?b.score-a.score:b.tieValue-a.tieValue||a.quest.title.localeCompare(b.quest.title,'ko'));
   }
@@ -658,7 +667,7 @@ const AcademyPlanner=(()=>{
    const index=items.findIndex(item=>item.quest.kind==='쿠쿠이 박사');
    if(index>=0){const item=items.splice(index,1)[0],largestReset=Math.max(deficits[0],deficits[1]);item.firstTurnReset=true;item.priorityOverride=1;item.resetColors=largestReset>0?keys.slice(0,2).filter((_,i)=>deficits[i]===largestReset):[];items.unshift(item);}
   }
-  for(const item of items)item.onlyCompletion=item.needsJackpot&&exact&&model.uniformRewards&&items.every(other=>other.quest.kind==='오박사'||other.value<=1e-12);
+  for(const item of items)item.onlyCompletion=item.needsJackpot&&rounds.length===1&&model.uniformRewards&&items.every(other=>other===item||other.value<=1e-12);
   return {items,depth:completedDepth,exact,limited};
  }
  return {keys,vector,buildModel,createState,getUnavailableReason,recommendChoices};
@@ -983,6 +992,7 @@ function plannerRewardSummary(q){
 function plannerPriorityReward(item){if(!item.firstTurnReset||!item.resetColors.length)return plannerRewardSummary(item.quest);return item.resetColors.map(k=>boardColors[k].emoji).join(' 또는 ')+' 한 색 '+fmt(Math.max(...item.quest.outcomes.flatMap(o=>o.reward)))+'개';}
 function plannerChoiceWarning(q,context){return q.kind==='오박사'&&!(context.state.used&context.model.blueBit)?'<span class="planner-choice-warning">선택 시 그린 선택 불가</span>':'';}
 function plannerUpsideBadge(item,context){
+ if(item.needsJackpot)return '<span class="planner-upside-badge planner-completion-badge">조건부 목표 달성 가능 · 400개 보상 5%</span>';
  if(context.preference!=='upside')return '';
  if(item.quest.kind==='오박사')return '<span class="planner-upside-badge">400개 보상 · 5%</span>';
  if(!item.hasUsefulUpside||item.highOutcomeProbability===null)return '';
@@ -994,12 +1004,28 @@ function plannerUpsideBadge(item,context){
  return '<span class="planner-upside-badge" title="현재 부족분 해소에 가장 유리한 색·수량 결과의 합산 확률입니다.">유효 고점 결과 · '+plannerPercent(item.highOutcomeProbability)+(item.metrics?.assumed?' · 균등 가정':'')+'</span>';
 }
 function plannerRankLabel(item,index,list){if(item.priorityOverride)return item.priorityOverride+'순위';const same=other=>!other.priorityOverride&&Math.abs(item.score-other.score)<1e-10&&Math.abs(item.tieValue-other.tieValue)<1e-10,first=list.findIndex(same),count=list.filter(same).length;return (count>1?'공동 ':'')+(first<0?index+1:first+1)+'순위';}
+function plannerOrderPriorities(items,context){
+ const ordered=items.slice().sort(plannerComparePriority);
+ const freeRounds=context.rounds.filter(round=>round!==11||!context.forceClavell||Boolean(context.state.used&context.model.clavellBit));
+ if(context.preference!=='balanced'||freeRounds.length!==1||freeRounds[0]!==context.rounds[0])return ordered;
+ const index=ordered.findIndex(item=>item.needsJackpot);
+ if(index<0)return ordered;
+ const [oak]=ordered.splice(index,1);
+ ordered.splice(Math.min(2,ordered.length),0,oak);
+ return ordered.map((item,i)=>({...item,priorityOverride:i+1}));
+}
 function plannerReason(item,context){
  const q=item.quest;
  if(item.firstTurnReset)return item.resetColors.length?'1턴 리세 추천 · 빨강·파랑 중 부족량이 큰 색의 쿠쿠이를 우선':'1턴 쿠쿠이 리세 우선 · 빨강·파랑의 추가 부족분은 없음';
- if(item.onlyCompletion)return '남은 턴의 검토 후보 중 오박사 400개 결과가 있어야 완성 가능 · 5%';
- if(item.needsJackpot)return '이 선택으로 완성을 노리려면 네 색 400개 결과가 필요 · 5%';
+ if(item.onlyCompletion)return '이번 턴 검토 후보 중 유일한 완성 기회 · 네 색 각 400개 보상(5%) 필요';
+ if(item.needsJackpot){
+  const remainingColor=AcademyPlanner.keys.find((_,i)=>context.deficits[i]>400);
+  if(!remainingColor)return '네 색 각 400개 보상(5%)이 나오면 목표 완성';
+  if(context.rounds[1]===11&&context.forceClavell&&!(context.state.used&context.model.clavellBit))return '각 400개 보상(5%)을 받은 뒤 11턴에 '+boardColors[remainingColor].label+' 클라벨을 고르면 목표 완성';
+  return '이 선택으로 완성을 노리려면 네 색 각 400개 보상(5%)이 필요';
+ }
  if(q.kind==='오박사'&&item.metrics?.finishProbability>=1-1e-12)return '30개씩 받는 결과로도 네 색 목표를 모두 마무리할 수 있음';
+ if(q.kind==='오박사'&&context.rounds.length===1&&item.exact&&item.value<=1e-12)return '마지막 선택 · 부족분은 줄지만 이 보상만으로 목표가 완성되지는 않음';
  if(q.kind==='오박사'&&context.preference==='upside')return '고점 우선 · 5%의 각 400개 결과에서 부족분을 크게 줄일 기회 · 보통은 각 30개(95%)';
  if(q.kind==='오박사'&&item.endgameFallback)return (context.state.used&context.model.blueBit?'막판의 큰 보상 대안':'그린이 안 뜰 때의 막판 대안')+' · 5%의 각 400개 보상으로 남은 부족분을 크게 줄일 기회';
  if(q.kind==='오박사')return '대부분 네 색 30개씩(95%)'+(item.blueBlocked?' · 선택 후 그린 기회가 사라져 신중하게':' · 400개씩은 5%');
@@ -1014,10 +1040,15 @@ function plannerReason(item,context){
  const palette=plannerPalette(q).filter(k=>context.deficits[AcademyPlanner.keys.indexOf(k)]>0).sort((a,b)=>context.deficits[AcademyPlanner.keys.indexOf(b)]-context.deficits[AcademyPlanner.keys.indexOf(a)]);
  return palette.slice(0,3).map(k=>boardColors[k].label).join('·')+' 부족분 확보'+(q.random?context.preference==='upside'&&item.hasUsefulUpside?' · 큰 보상 결과의 이득을 더 반영':' · 낮은 보상 결과 뒤의 선택도 고려':' · 이후 턴의 남은 후보도 고려');
 }
+function plannerReasonMarkup(item,context){
+ const reason=plannerReason(item,context);
+ const partial=reason==='마지막 선택 · 부족분은 줄지만 이 보상만으로 목표가 완성되지는 않음';
+ return partial?'<p class="planner-partial-warning"><strong>'+escapeHtml(reason)+'</strong></p>':'<p>'+escapeHtml(reason)+'</p>';
+}
 function renderPlannerPriorities(result,context){
  const {model,state,rounds}=context,items=result.items,box=document.getElementById('plannerResults'),grouped=new Map();
  for(const item of items){const q=item.quest,key=plannerGroupKey(q);if(!grouped.has(key))grouped.set(key,{...item,names:[]});grouped.get(key).names.push(q.title);}
- const rows=[...grouped.values()].slice(0,10).map((item,i,list)=>'<li class="planner-priority-row"><span class="planner-rank">'+plannerRankLabel(item,i,list)+'</span><div><b>'+escapeHtml(item.firstTurnReset?'쿠쿠이 박사 · '+(item.resetColors.length?item.resetColors.map(k=>boardColors[k].emoji).join(' / ')+' 리세':'1턴 리세'):item.names.length>1&&item.quest.equivalenceKey?plannerPalette(item.quest).map(k=>boardColors[k].emoji).join('')+' 보상':plannerChoiceTitle(item.quest))+'</b><span class="planner-priority-reward">'+escapeHtml(plannerPriorityReward(item))+'</span>'+plannerChoiceWarning(item.quest,context)+plannerUpsideBadge(item,context)+'<p>'+escapeHtml(plannerReason(item,context))+'</p>'+((item.quest.ordinaryCombo||item.names.length>1)?'<span class="small">'+escapeHtml(item.names.slice(0,3).join(' · ')+(item.names.length>3?' 외 '+(item.names.length-3)+'종':''))+'</span>':'')+'</div></li>').join('');
+ const rows=plannerOrderPriorities([...grouped.values()],context).slice(0,10).map((item,i,list)=>'<li class="planner-priority-row"><span class="planner-rank">'+plannerRankLabel(item,i,list)+'</span><div><b>'+escapeHtml(item.firstTurnReset?'쿠쿠이 박사 · '+(item.resetColors.length?item.resetColors.map(k=>boardColors[k].emoji).join(' / ')+' 리세':'1턴 리세'):item.names.length>1&&item.quest.equivalenceKey?plannerPalette(item.quest).map(k=>boardColors[k].emoji).join('')+' 보상':plannerChoiceTitle(item.quest))+'</b><span class="planner-priority-reward">'+escapeHtml(plannerPriorityReward(item))+'</span>'+plannerChoiceWarning(item.quest,context)+plannerUpsideBadge(item,context)+plannerReasonMarkup(item,context)+((item.quest.ordinaryCombo||item.names.length>1)?'<span class="small">'+escapeHtml(item.names.slice(0,3).join(' · ')+(item.names.length>3?' 외 '+(item.names.length-3)+'종':''))+'</span>':'')+'</div></li>').join('');
  const clavell=items.filter(item=>item.quest.appearanceColor);let advice='';
  if(state.used&model.clavellBit)advice='<div class="planner-clavell"><b>클라벨 · 이미 선택 완료</b><p>선택 기록을 반영해 추천에서 제외했습니다.</p></div>';
  else if(clavell.length){const best=clavell[0],tied=clavell.filter(item=>Math.abs(item.score-best.score)<1e-10&&Math.abs(item.tieValue-best.tieValue)<1e-10),recommended=tied.map(item=>boardColors[item.quest.appearanceColor].emoji+' '+boardColors[item.quest.appearanceColor].label).join(' · '),k=best.quest.appearanceColor,amount=best.quest.outcomes[0].reward[AcademyPlanner.keys.indexOf(k)],others=clavell.filter(item=>!tied.includes(item)).map(item=>boardColors[item.quest.appearanceColor].emoji+' '+boardColors[item.quest.appearanceColor].label);advice='<div class="planner-clavell"><b>클라벨 색 추천 · '+recommended+(tied.length>1?' 공동 우선':' 우선')+'</b><p>한 색 '+fmt(amount)+'개 = 기본 90 × 현재 전투 배수</p><p>'+(rounds[0]===11?'이번 턴은 표시된 색의 클라벨을 선택합니다.':'11턴 전이라도 <strong>'+recommended+' 클라벨이 뜨면 선택을 고려하세요.</strong> 일찍 고르면 11턴을 자유 선택에 쓸 수 있습니다.')+'</p><p class="small">'+(others.length?'그다음 색: '+escapeHtml(others.join(' → ')):'다른 색은 현재 부족분을 줄이지 않습니다.')+'</p></div>';}
@@ -1078,8 +1109,8 @@ function renderPlannerLookupChoice(){
  if(!item){box.innerHTML='<div class="planner-lookup-card">'+heading+'<p>현재 부족한 색을 줄이지 않아 추천 순위에서 제외했습니다.</p></div>';return;}
  const group=plannerGroupKey(quest),representatives=new Map();
  for(const entry of result.items){const key=plannerGroupKey(entry.quest);if(key!==group&&!representatives.has(key))representatives.set(key,entry);}
- const ordered=[...representatives.values(),item].sort(plannerComparePriority),index=ordered.indexOf(item),rank=plannerRankLabel(item,index,ordered);
- box.innerHTML='<div class="planner-lookup-card">'+heading+plannerUpsideBadge(item,context)+'<p><strong>'+escapeHtml(rank)+'</strong> · 전체 '+ordered.length+'개 보상 묶음 중'+(context.preference==='upside'?' · 고점 우선 기준':'')+'</p><p>'+escapeHtml(plannerReason(item,context))+'</p><p class="small">'+(index<10?'상위 10개 추천에 해당하는 선택지입니다.':'현재 정보 기준으로 상위 10개보다 우선도가 낮습니다. 등장한 다른 항목들과 함께 비교하세요.')+'</p></div>';
+ const ordered=plannerOrderPriorities([...representatives.values(),item],context),index=ordered.findIndex(entry=>entry.quest.id===item.quest.id),rank=plannerRankLabel(ordered[index],index,ordered);
+ box.innerHTML='<div class="planner-lookup-card">'+heading+plannerUpsideBadge(item,context)+'<p><strong>'+escapeHtml(rank)+'</strong> · 전체 '+ordered.length+'개 보상 묶음 중'+(context.preference==='upside'?' · 고점 우선 기준':'')+'</p>'+plannerReasonMarkup(item,context)+'<p class="small">'+(index<10?'상위 10개 추천에 해당하는 선택지입니다.':'현재 정보 기준으로 상위 10개보다 우선도가 낮습니다. 등장한 다른 항목들과 함께 비교하세요.')+'</p></div>';
 }
 document.getElementById('plannerLookupSearch').addEventListener('input',renderPlannerLookupOptions);
 document.getElementById('plannerLookupSelect').addEventListener('change',event=>{plannerLookupChoiceId=event.target.value;renderPlannerLookupChoice();});
