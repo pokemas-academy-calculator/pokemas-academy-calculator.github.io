@@ -59,7 +59,11 @@
 .planner-top-grid{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(0,1.4fr);gap:18px;align-items:start;margin:12px 0 14px}.planner-top-main{min-width:0}.planner-top-main .planner-controls{margin-top:0}.planner-top-side{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:start;min-width:0}.planner-top-side>div{min-width:0}.planner-top-side .planner-clavell,.planner-top-side .planner-other{margin:0;padding:12px;min-width:0}.planner-top-side .planner-clavell b{font-size:13px}.planner-top-side .planner-clavell p{font-size:12px;line-height:1.6}.planner-top-side .planner-other .small{font-size:11px}.planner-top-side .planner-other input,.planner-top-side .planner-other select{font-size:12px;padding:7px 8px}.planner-top-side .planner-other label{margin-top:7px}.planner-advisory{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;padding:11px 13px;margin:12px 0;background:var(--bg);color:var(--muted);font-size:12px;line-height:1.65}.planner-advisory strong{color:var(--ink)}.planner-advisory p{margin:4px 0 0}@media(max-width:760px){.planner-top-grid{grid-template-columns:1fr;gap:10px}.planner-top-side{grid-template-columns:minmax(0,1fr)}}@media(max-width:520px){.planner-top-side{grid-template-columns:1fr}.planner-advisory{padding:10px 11px}}
 
 .planner-priority-row .planner-partial-warning,.planner-lookup-card .planner-partial-warning{color:var(--muted);background:transparent;border:0;border-left:2px solid var(--line);border-radius:0;padding:3px 0 3px 8px;line-height:1.6}.planner-partial-warning strong{font-weight:700}.planner-completion-badge{border-color:var(--blue);font-weight:800;padding:4px 8px}
-</style></head><body><div class="wrap">
+</style><style id="calculatorBuddyIconStyles">
+.buddy-orb-icon{display:inline-block;position:relative;overflow:hidden;width:1.2em;height:1.2em;vertical-align:-.22em;margin-inline:.04em;flex:none;line-height:1}
+.buddy-orb-icon img{display:block;position:absolute;width:261.22449%;height:261.22449%;max-width:none;left:-84.69388%;top:-83.67347%;pointer-events:none}
+</style>
+</head><body><div class="wrap">
 <h1>포케마스 아카데미 계산기</h1><p class="sub">목표 빌드의 색별 요구량을 계산합니다.</p>
 <div class="navigation-row"><div class="app-tabs" role="tablist" aria-label="계산기 메뉴"><button type="button" id="calculatorTab" role="tab" aria-controls="calculatorPanel" aria-selected="true">드롭 계산기</button><button type="button" id="probabilityTab" role="tab" aria-controls="probabilityPanel" aria-selected="false">확률 정보</button></div><button type="button" id="themeToggle" class="theme-toggle" aria-label="다크 모드로 전환" title="다크 모드로 전환" aria-pressed="false">🌙</button></div>
 <section id="calculatorPanel" class="app-panel" role="tabpanel" aria-labelledby="calculatorTab">
@@ -1278,7 +1282,78 @@ update();
 (()=>{const tabs=[document.getElementById('calculatorTab'),document.getElementById('probabilityTab')];const panels=[document.getElementById('calculatorPanel'),document.getElementById('probabilityPanel')];tabs.forEach((tab,index)=>tab.addEventListener('click',()=>{tabs.forEach((item,i)=>item.setAttribute('aria-selected',String(i===index)));panels.forEach((panel,i)=>panel.hidden=i!==index);window.scrollTo({top:0,behavior:'smooth'});}));})();
 </script><script id="themeToggleScript">
 (()=>{const button=document.getElementById('themeToggle'),key='pokemas-academy-calculator-theme';let dark=false;try{dark=localStorage.getItem(key)==='dark'}catch{}const apply=enabled=>{document.documentElement.dataset.theme=enabled?'dark':'light';button.textContent=enabled?'☀️':'🌙';button.setAttribute('aria-pressed',String(enabled));const label=enabled?'라이트 모드로 전환':'다크 모드로 전환';button.setAttribute('aria-label',label);button.title=label};apply(dark);button.addEventListener('click',()=>{dark=document.documentElement.dataset.theme!=='dark';apply(dark);try{localStorage.setItem(key,dark?'dark':'light')}catch{}})})();
-</script></body></html>
+</script><script id="calculatorBuddyIcons">
+/* Native buddy artwork replaces only the five resource display tokens. */
+(() => {
+  const icons = new Map([
+    ['🔴', ['red', '빨강 버디']], ['🔵', ['blue', '파랑 버디']],
+    ['🟢', ['green', '초록 버디']], ['🟡', ['yellow', '노랑 버디']],
+    ['🧰', ['tm', '기술머신 오브']],
+  ]);
+  const pattern = /🔴|🔵|🟢|🟡|🧰/gu;
+  const excluded = 'script,style,textarea,input,select,option,svg,.buddy-orb-icon';
+  const eligible = node => node.nodeType === Node.TEXT_NODE && node.parentElement && !node.parentElement.closest(excluded);
+  function replaceText(node) {
+    if (!eligible(node)) return;
+    const value = node.nodeValue;
+    pattern.lastIndex = 0;
+    if (!pattern.test(value)) return;
+    pattern.lastIndex = 0;
+    const fragment = document.createDocumentFragment();
+    let offset = 0;
+    for (const match of value.matchAll(pattern)) {
+      fragment.append(document.createTextNode(value.slice(offset, match.index)));
+      const [color, label] = icons.get(match[0]);
+      const icon = document.createElement('span');
+      icon.className = 'buddy-orb-icon';
+      icon.setAttribute('role', 'img');
+      icon.setAttribute('aria-label', label);
+      const image = document.createElement('img');
+      image.src = 'assets/buddy-orbs/' + color + '.png';
+      image.alt = '';
+      image.width = image.height = 256;
+      image.setAttribute('aria-hidden', 'true');
+      image.draggable = false;
+      icon.append(image);
+      fragment.append(icon);
+      offset = match.index + match[0].length;
+    }
+    fragment.append(document.createTextNode(value.slice(offset)));
+    node.replaceWith(fragment);
+  }
+  function decorate(root) {
+    if (root.nodeType === Node.TEXT_NODE) { replaceText(root); return; }
+    if (root.nodeType !== Node.ELEMENT_NODE || root.closest(excluded)) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: node => eligible(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(replaceText);
+  }
+  const root = document.querySelector('.wrap') || document.body;
+  decorate(root);
+  const pending = new Set();
+  let frame = 0;
+  const observer = new MutationObserver(records => {
+    for (const record of records) {
+      if (record.type === 'characterData') pending.add(record.target);
+      else for (const node of record.addedNodes) {
+        const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+        if (element && !element.closest(excluded)) pending.add(node);
+      }
+    }
+    if (!pending.size || frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      const nodes = [...pending]; pending.clear();
+      for (const node of nodes) if (node.isConnected) decorate(node);
+    });
+  });
+  observer.observe(root, {subtree: true, childList: true, characterData: true});
+})();
+</script>
+</body></html>
 
 
 
